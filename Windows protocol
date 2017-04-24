@@ -34,7 +34,7 @@ vector<Frame>::iterator it;
 */
 int stud_slide_window_stop_and_wait(char *pBuffer, int bufferSize, UINT8 messageType)
 {
- Frame tmpFrame;
+	Frame tmpFrame;
 	tmpFrame.pframe = new frame;
 	tmpFrame.pframe = (frame*)pBuffer;
 	tmpFrame.size = bufferSize;
