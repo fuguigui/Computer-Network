@@ -1,33 +1,46 @@
+#include "sysinclude.h"
 #include <queue>
 #include <vector>
-//#include "sysinclude.h"
-extern void SendFRAMEPacket(unsigned char* pData,unsigned int len);
 
-using namespace std;
+extern void SendFRAMEPacket(unsigned char* pData, unsigned int len);
 
 #define WINDOW_SIZE_STOP_WAIT 1
 #define WINDOW_SIZE_BACK_N_FRAME 4
+
 typedef enum{data,ack,nak} frame_kind;
-struct frame_head{
+typedef struct frame_head{
 	frame_kind kind;
 	unsigned int seq;
 	unsigned int ack;
 	unsigned char data[100];
 	};
-struct frame{
+typedef struct frame{
 	frame_head head;
 	unsigned int size;
 };
-queue<frame> SendList;
-queue<frame> WaitList;
-vector<frame> BackSendVec;
-vector<frame> ChoiceSendVec;
-int stud_slide_window_stop_and_wait(char *pBuffer, int bufferSize,UINT8 messageType){
-	frame tmpFrame;
+
+typedef struct Frame{
+	frame* pframe;
+	int size;
+};
+
+queue<Frame> SendList;
+queue<Frame> WaitList;
+vector<Frame> BackSendVec;
+vector<Frame> ChoiceSendVec;
+vector<Frame>::iterator it;
+
+/*
+* 停等协议测试函数
+*/
+int stud_slide_window_stop_and_wait(char *pBuffer, int bufferSize, UINT8 messageType)
+{
+	Frame tmpFrame;
+	tmpFrame.pframe = new frame;
+	tmpFrame.pframe = (frame*)pBuffer;
 	tmpFrame.size = bufferSize;
-	tmpFrame.head = *(frame_head *)pBuffer;
-	int ack = tmpFrame.head.ack;
-	int seq = tmpFrame.head.seq;
+	int ack = tmpFrame.pframe->head.ack;
+	int seq = tmpFrame.pframe->head.seq;
 
 	if(messageType == MSG_TYPE_SEND){
 		//将帧加入发送缓存，并发送
@@ -43,17 +56,17 @@ int stud_slide_window_stop_and_wait(char *pBuffer, int bufferSize,UINT8 messageT
 	}
 	else if(messageType == MSG_TYPE_RECEIVE) {
 		//收到确认帧，检查是否发送成功。 
-		if(((frame_head*)pBuffer)->kind == ack){
+		if(((frame*)pBuffer)->head.kind == ack){
 			//发送成功，检查序号是否一致
-		int headseq = SendList.top().head.seq;
+		int headseq = SendList.front().pframe->head.seq;
 		if(headseq == seq){
 			//如果序列号相等,清除发送缓存
 			SendList.pop();
 			if(WaitList.size()>0){
 				//如果等待发送队列非空，存入发送缓存，并发送
-				frame sendFrame = WaitList.top();
+				Frame sendFrame = WaitList.front();
 				WaitList.pop();
-				unsigned char* sendP = &(unsigned char)sendFrame.head;
+				unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 				SendList.push(sendFrame);
 		        SendFRAMEPacket(sendP,sendFrame.size);
 			}
@@ -61,27 +74,32 @@ int stud_slide_window_stop_and_wait(char *pBuffer, int bufferSize,UINT8 messageT
 		}
 		else{
 			//发送失败，重新发送;
-			frame sendFrame = SendList.top();
-			unsigned char* sendP = &(unsigned char)sendFrame.head;
+			Frame sendFrame = SendList.front();
+			unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 		    SendFRAMEPacket(sendP,sendFrame.size);
 		}
 	}
 	else if(messageType == MSG_TYPE_TIMEOUT){
 		//如果超时，就重新发送 
-		frame sendFrame = SendList.top();
-		unsigned char* sendP = &(unsigned char)sendFrame.head;
+		Frame sendFrame = SendList.front();
+		unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 		SendFRAMEPacket(sendP,sendFrame.size);
 	}
 	return 0;
 }
-//回退N 
+
+/*
+* 回退n帧测试函数
+*/
 int stud_slide_window_back_n_frame(char *pBuffer, int bufferSize, UINT8 messageType)
 {
-	frame tmpFrame;
+	Frame tmpFrame;
+	tmpFrame.pframe = new frame;
+	tmpFrame.pframe = (frame*)pBuffer;
 	tmpFrame.size = bufferSize;
-	tmpFrame.head = *(frame_head*)pBuffer;
-	int ack = tmpFrame.head.ack;
-	int seq = tmpFrame.head.seq;
+	int ack = tmpFrame.pframe->head.ack;
+	int seq = tmpFrame.pframe->head.seq;
+
 	if(messageType == MSG_TYPE_SEND){
 		//将帧加入发送缓存，并发送
 		if(BackSendVec.size() == WINDOW_SIZE_BACK_N_FRAME){
@@ -90,21 +108,22 @@ int stud_slide_window_back_n_frame(char *pBuffer, int bufferSize, UINT8 messageT
 		}
 		else{
 			BackSendVec.push_back(tmpFrame);
-			SendFRAMEPacket(pBuffer,bufferSize);
+			SendFRAMEPacket((unsigned char *)pBuffer,bufferSize);
 		}
 	}
 	else if(messageType == MSG_TYPE_RECEIVE) {
-		int tmpseq = BackSendVec[0].head.seq;
-		if((frame*)pBuffer->head.kind == ack){
+		int tmpseq = BackSendVec[0].pframe->head.seq;
+		if(((frame*)pBuffer)->head.kind == ack){
 			//收到成功确认，验证序列号 
 			if(tmpseq == seq){
 				//如果序列号相等,减少发送缓存 
-				BackSendVec.erase(BackSendVec[0]);
+				it = BackSendVec.begin();
+				BackSendVec.erase(BackSendVec.begin(),it + 1);
 				while(WaitList.size()>0 && BackSendVec.size()< WINDOW_SIZE_BACK_N_FRAME){
 					//发送等待队列中的帧
-					frame sendFrame = WaitList.top();
+					Frame sendFrame = WaitList.front();
 					WaitList.pop();
-					unsigned char* sendP = &(unsigned char)sendFrame.head;
+					unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 					BackSendVec.push_back(sendFrame);
 		        	SendFRAMEPacket(sendP,sendFrame.size);
 				}
@@ -112,8 +131,8 @@ int stud_slide_window_back_n_frame(char *pBuffer, int bufferSize, UINT8 messageT
 			else{
 				//退回重发全部发送缓存中的帧
 				for(int i = 0;i<BackSendVec.size();++i){
-					frame sendFrame =BackSendVec[i];
-					unsigned char* sendP = &(unsigned char)sendFrame.head;
+					Frame sendFrame =BackSendVec[i];
+					unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 		        	SendFRAMEPacket(sendP,sendFrame.size);
 				} 
 			}
@@ -121,8 +140,8 @@ int stud_slide_window_back_n_frame(char *pBuffer, int bufferSize, UINT8 messageT
 		else{
 			//发送失败，全部重新发送;
 			for(int i = 0;i<BackSendVec.size();++i){
-					frame sendFrame =BackSendVec[i];
-					unsigned char* sendP = &(unsigned char)sendFrame.head;
+				Frame sendFrame =BackSendVec[i];
+				unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 		        	SendFRAMEPacket(sendP,sendFrame.size);
 			} 
 		}
@@ -130,21 +149,24 @@ int stud_slide_window_back_n_frame(char *pBuffer, int bufferSize, UINT8 messageT
 	else if(messageType == MSG_TYPE_TIMEOUT){
 		//如果超时，全部重新发送
 		for(int i = 0;i<BackSendVec.size();++i){
-			frame sendFrame = BackSendVec[i];
-			unsigned char* sendP = &(unsigned char)sendFrame.head;
+			Frame sendFrame =BackSendVec[i];
+			unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 			SendFRAMEPacket(sendP, sendFrame.size);
 			} 
 	}
 	return 0;
 }
-//选择重传
+
+/*
+* 选择性重传测试函数
+*/
 int stud_slide_window_choice_frame_resend(char *pBuffer, int bufferSize, UINT8 messageType)
 {
-	frame tmpFrame;
-	tmpFrame.size = bufferSize;
-	tmpFrame.head = *(frame_head*)pBuffer;
-	int ack = tmpFrame.head.ack;
-	int seq = tmpFrame.head.seq;
+	Frame tmpFrame;
+	tmpFrame.pframe = new frame;
+	tmpFrame.pframe = (frame*)pBuffer;
+	int ack = tmpFrame.pframe->head.ack;
+	int seq = tmpFrame.pframe->head.seq;
 	if(messageType == MSG_TYPE_SEND){
 		if(BackSendVec.size() == WINDOW_SIZE_BACK_N_FRAME){
 			//如果发送窗口已满，将帧加入等待缓存
@@ -153,37 +175,38 @@ int stud_slide_window_choice_frame_resend(char *pBuffer, int bufferSize, UINT8 m
 		else{
 			//加入发送缓存，并发送
 			BackSendVec.push_back(tmpFrame);
-			SendFRAMEPacket(pBuffer,bufferSize);
+			SendFRAMEPacket((unsigned char*)pBuffer,bufferSize);
 		}
 	}
 	else if(messageType == MSG_TYPE_RECEIVE) {
-		if((frame*)pBuffer->head.kind == ack){
+		if(((frame*)pBuffer)->head.kind == ack){
 			//收到成功确认，比对序列号，删除发送缓存中，序列号对应相等的帧
-			int i = 0;
-			while (i < BackSendVec.size()) {
-				int tmpseq = BackSendVec[i].head.seq;
-				if (tmpseq == seq) {
-					//如果序列号相等,就接收，删除发送缓存中的该帧
-					BackSendVec.erase(BackSendVec[i]);
-					break;
-			}
+			for(it = BackSendVec.begin(); it != BackSendVec.end(); ++ it)
+      	      {
+            	    Frame receiveframe = *it;
+            	    if(seq == ((receiveframe.pframe)->head.seq))
+            	    {
+                  	  BackSendVec.erase(BackSendVec.begin(), it + 1);
+                  	  break;
+                		}
+            	}
+
 			//等待队列不为空，则发送等待队列中的帧
 			while(WaitList.size()>0 && BackSendVec.size()< WINDOW_SIZE_BACK_N_FRAME){
-					frame sendFrame = WaitList.top();
+					Frame sendFrame = WaitList.front();
 					WaitList.pop();
-					unsigned char* sendP = &(unsigned char)sendFrame.head;
-		        	SendFRAMEPacket(sendP,sendFrame.size);
-		        	BackSendVec.push_back(sendFrame);
-				}
+					unsigned char* sendP = (unsigned char*)sendFrame.pframe;
+		        		SendFRAMEPacket(sendP,sendFrame.size);
+		        		BackSendVec.push_back(sendFrame);
 			}
 		}
 		else{
 			//发送失败，重新发送该帧;
 			for(int i = 0;i<BackSendVec.size();++i){
-				int tmpseq = BackSendVec[i].head.seq;
+				int tmpseq = BackSendVec[i].pframe->head.seq;
 				if (tmpseq == seq) {
-					frame sendFrame = BackSendVec[i];
-					unsigned char* sendP = &(unsigned char)sendFrame.head;
+					Frame sendFrame = BackSendVec[i];
+					unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 					SendFRAMEPacket(sendP, sendFrame.size);
 					break;
 				}
@@ -193,10 +216,10 @@ int stud_slide_window_choice_frame_resend(char *pBuffer, int bufferSize, UINT8 m
 	else if(messageType == MSG_TYPE_TIMEOUT){
 		//超时，重新发送该帧
 		for (int i = 0; i<BackSendVec.size(); ++i) {
-			int tmpseq = BackSendVec[i].head.seq;
+			int tmpseq = BackSendVec[i].pframe->head.seq;
 			if (tmpseq == seq) {
-				frame sendFrame = BackSendVec[i];
-				unsigned char* sendP = &(unsigned char)sendFrame.head;
+				Frame sendFrame = BackSendVec[i];
+				unsigned char* sendP = (unsigned char*)sendFrame.pframe;
 				SendFRAMEPacket(sendP, sendFrame.size);
 				break;
 			}
