@@ -56,16 +56,16 @@ extern unsigned int getServerIpv4Address();
 struct TCB{
 	TCB* next;
 
-    UINT32 srcAddr;//Ô´µØÖ· 
-    UINT32 dstAddr;//Ä¿µÄµØÖ· 
-	UINT16 srcPort;//Ô´¶Ë¿Ú
-	UINT16 dstPort;//Ä¿µÄ¶Ë¿Ú
+    UINT32 srcAddr;//æºåœ°å€ 
+    UINT32 dstAddr;//ç›®çš„åœ°å€ 
+	UINT16 srcPort;//æºç«¯å£
+	UINT16 dstPort;//ç›®çš„ç«¯å£
 	UINT32 ack;
 	UINT32 seq;
 	UINT8 state;
-	UINT16 window;//¿ÉÒÔÓÃÀ´·¢ËÍµÄ´°¿ÚµÄÊıÁ¿
+	UINT16 window;//å¯ä»¥ç”¨æ¥å‘é€çš„çª—å£çš„æ•°é‡
 
-	int socketfd;//socket±êÊ¶·û
+	int socketfd;//socketæ ‡è¯†ç¬¦
 
 	TCB() {
 		seq = gSeqNum;
@@ -80,7 +80,7 @@ struct TCB{
 		srcPort = gSrcPort;
 		dstPort = gDstPort;
 	}
-	TCB(int _socketfd) // ÓÃÓÚ¿Í»§¶Ësocketº¯ÊıµÄ¹¹½¨º¯Êı
+	TCB(int _socketfd) // ç”¨äºå®¢æˆ·ç«¯socketå‡½æ•°çš„æ„å»ºå‡½æ•°
 	{
 		seq = gSeqNum;
 		ack = gAckNum;
@@ -89,7 +89,7 @@ struct TCB{
 		next = NULL;
 
 		socketfd = _socketfd;
-		//Õâ¸öÓ¦¸ÃÒ²ÒªÓĞ°É
+		//è¿™ä¸ªåº”è¯¥ä¹Ÿè¦æœ‰å§
 		srcAddr = getIpv4Address();
 		dstAddr = getServerIpv4Address();
 		srcPort = gSrcPort;
@@ -97,8 +97,8 @@ struct TCB{
 	}
 };
         
-TCB* tcb_link_head = NULL;//¶¨ÒåTCBÁ´±íµÄÍ·²¿
-static int socketfd = 1; // Í³Ò»·ÖÅä±êÖ¾·û
+TCB* tcb_link_head = NULL;//å®šä¹‰TCBé“¾è¡¨çš„å¤´éƒ¨
+static int socketfd = 1; // ç»Ÿä¸€åˆ†é…æ ‡å¿—ç¬¦
 
 TCB* TCBSearch_Addr(UINT32 srcAddr, UINT16 srcPort, UINT32 dstAddr, UINT16 dstPort) {
 	TCB* temp = tcb_link_head;
@@ -117,23 +117,23 @@ TCB* TCBSearch_socket(int _socketfd){
 }
        
 UINT16 checkSum(char *pBuffer,unsigned short len,UINT32 srcAddr,UINT32 dstAddr){
-	//TCPĞ­Òé´øÓĞ12¸ö×Ö½ÚµÄIPÎ±Í·²¿£¬ĞèÒª×ÔÖ÷¹¹Ôì¡£
-       //ÈôĞ£ÑéºÍÕıÈ·£¬Ôò½á¹ûÎª0 
+	//TCPåè®®å¸¦æœ‰12ä¸ªå­—èŠ‚çš„IPä¼ªå¤´éƒ¨ï¼Œéœ€è¦è‡ªä¸»æ„é€ ã€‚
+       //è‹¥æ ¡éªŒå’Œæ­£ç¡®ï¼Œåˆ™ç»“æœä¸º0 
        UINT32 ckSum = 0;
-	   int real_len = len + 12;//ÕæÊµ³¤¶ÈĞèÒªÔö¼Ó12¸ö×Ö½ÚµÄÎ±Ê×²¿
+	   int real_len = len + 12;//çœŸå®é•¿åº¦éœ€è¦å¢åŠ 12ä¸ªå­—èŠ‚çš„ä¼ªé¦–éƒ¨
 	   char *Buffer = new char[real_len];
 
 	   memset(Buffer, 0, real_len);
 	   memcpy(Buffer + 12, pBuffer, len);
 
-	   //¹¹ÔìÎ±Ê×²¿¡£Î±Ê×²¿Îª£º4¸ö×Ö½ÚÔ´IPµØÖ·£¬4¸ö×Ö½ÚÄ¿µÄipµØÖ·£¬1¸ö×Ö½Ú0,1¸ö×Ö½Ú°æ±¾ºÅ£¬2¸ö×Ö½ÚTCP°ü³¤¶È
+	   //æ„é€ ä¼ªé¦–éƒ¨ã€‚ä¼ªé¦–éƒ¨ä¸ºï¼š4ä¸ªå­—èŠ‚æºIPåœ°å€ï¼Œ4ä¸ªå­—èŠ‚ç›®çš„ipåœ°å€ï¼Œ1ä¸ªå­—èŠ‚0,1ä¸ªå­—èŠ‚ç‰ˆæœ¬å·ï¼Œ2ä¸ªå­—èŠ‚TCPåŒ…é•¿åº¦
 	   *((UINT32*)Buffer) = htonl(srcAddr);
 	   *((UINT32*)(Buffer + 4)) = htonl(dstAddr);
-	   Buffer[9] = 6;//´«Êä²ãĞ­ÒéºÅ£ºTCPÎª6
+	   Buffer[9] = 6;//ä¼ è¾“å±‚åè®®å·ï¼šTCPä¸º6
 	   *((UINT16*)(Buffer + 10)) = htons(len);
 
-	   //¼ÆËãĞ£ÑéºÍ
-	   //±£Ö¤real_lenÎªÅ¼Êı
+	   //è®¡ç®—æ ¡éªŒå’Œ
+	   //ä¿è¯real_lenä¸ºå¶æ•°
 	   if (real_len % 2) real_len++;
 	   for (int i = 0; i < real_len; i+=2) {
 		   ckSum += *((UINT16*)(Buffer + i));
@@ -142,8 +142,8 @@ UINT16 checkSum(char *pBuffer,unsigned short len,UINT32 srcAddr,UINT32 dstAddr){
 	   while (ckSum & 0xffff0000) {
 		   ckSum = (ckSum >> 16) + (ckSum & 0xffff);
 	   }
-	   //Èç¹ûºÍµÄ¸ß16Îª²»ÊÇ0£¬¾Í½«¸ß16Î»ÓëµÍ16Î»·´¸´Ïà¼Ó£¬Ö±µ½Îª0£»
-	   //½«16Î»µÄÖµÈ¡·´£¬·µ»Ø
+	   //å¦‚æœå’Œçš„é«˜16ä¸ºä¸æ˜¯0ï¼Œå°±å°†é«˜16ä½ä¸ä½16ä½åå¤ç›¸åŠ ï¼Œç›´åˆ°ä¸º0ï¼›
+	   //å°†16ä½çš„å€¼å–åï¼Œè¿”å›
 	   ckSum = ~ckSum;
 
 	   delete Buffer;
@@ -152,16 +152,16 @@ UINT16 checkSum(char *pBuffer,unsigned short len,UINT32 srcAddr,UINT32 dstAddr){
 
 int stud_tcp_input(char *pBuffer, unsigned short len, unsigned int srcAddr, unsigned int dstAddr)
 {
-    //1.¼ì²éĞ£ÑéºÍ
+    //1.æ£€æŸ¥æ ¡éªŒå’Œ
 	if (checkSum(pBuffer,len,srcAddr,dstAddr) != 0) return -1;
-    //  2.×Ö½ÚĞò×ª»»
+    //  2.å­—èŠ‚åºè½¬æ¢
 	UINT16 srcPort = ntohs(*((UINT16 *)pBuffer));
 	UINT16 dstPort = ntohs(*((UINT16 *)(pBuffer+2)));
 	UINT32 seq = ntohl(GetSeq(pBuffer));
 	UINT32 ack = ntohl(GetAck(pBuffer));
 	UINT8 flag = GetFlag(pBuffer);
 
-    // 3.¼ì²éĞòÁĞºÅ,Èç¹ûĞòÁĞºÅ²»ÕıÈ·,µ÷ÓÃdiscardPkt
+    // 3.æ£€æŸ¥åºåˆ—å·,å¦‚æœåºåˆ—å·ä¸æ­£ç¡®,è°ƒç”¨discardPkt
 	TCB* search_result = TCBSearch_Addr(srcAddr,srcPort,dstAddr,dstPort);
 	if (search_result == NULL) return -1;
 
@@ -169,7 +169,7 @@ int stud_tcp_input(char *pBuffer, unsigned short len, unsigned int srcAddr, unsi
 		tcp_DiscardPkt(pBuffer, STUD_TCP_TEST_SEQNO_ERROR);
 		return -1;
     }
-	//ÓĞÏŞ×´Ì¬»ú½øĞĞºóĞø´¦Àí
+	//æœ‰é™çŠ¶æ€æœºè¿›è¡Œåç»­å¤„ç†
 	if (search_result->state == SYN_SENT && flag == SYN_ACK) {
 		search_result->seq = ack;
 		search_result->ack = seq + 1;
@@ -196,48 +196,48 @@ void stud_tcp_output(char *pData, unsigned short len, unsigned char flag, unsign
 		tcb = new TCB();
 		tcb_link_head = tcb;
 	}
-	//ÔÚÒÑÓĞµÄTCB±íÖĞ²éÕÒ
-     //ÒªÔÚÊÕµ½ÉÏÒ»¸ö±¨ÎÄµÄÈ·ÈÏºó²ÅÄÜ¹»¼ÌĞø·¢ËÍ 
-	 //·¢ËÍ´°¿ÚÎª0£¬Ôò²»ÄÜ·¢ËÍ
+	//åœ¨å·²æœ‰çš„TCBè¡¨ä¸­æŸ¥æ‰¾
+     //è¦åœ¨æ”¶åˆ°ä¸Šä¸€ä¸ªæŠ¥æ–‡çš„ç¡®è®¤åæ‰èƒ½å¤Ÿç»§ç»­å‘é€ 
+	 //å‘é€çª—å£ä¸º0ï¼Œåˆ™ä¸èƒ½å‘é€
 	if (tcb == NULL || tcb->window == 0) {
 		return;
 	}
 
-	//Èç¹ûÄÜ·¢ËÍ£¬¹¹½¨ĞÂµÄ±¨ÎÄ
+	//å¦‚æœèƒ½å‘é€ï¼Œæ„å»ºæ–°çš„æŠ¥æ–‡
 	unsigned char* newData = new unsigned char[len + 20];
 	memset(newData, 0, len + 20);
 	memcpy(newData + 20, pData, len);
-	*(UINT16*)newData = htons(tcb->srcPort);//Ô´¶Ë¿Ú
-	*(UINT16*)(newData + 2) = htons(tcb->dstPort);//Ä¿µÄ¶Ë¿Ú
-	*(UINT32*)(newData + 4) = htonl(tcb->seq);//ĞòÁĞºÅ
-	*(UINT32*)(newData + 8) = htonl(tcb->ack);//È·ÈÏºÅ
-	newData[12] = 20<<2;//Ê×²¿³¤¶È
+	*(UINT16*)newData = htons(tcb->srcPort);//æºç«¯å£
+	*(UINT16*)(newData + 2) = htons(tcb->dstPort);//ç›®çš„ç«¯å£
+	*(UINT32*)(newData + 4) = htonl(tcb->seq);//åºåˆ—å·
+	*(UINT32*)(newData + 8) = htonl(tcb->ack);//ç¡®è®¤å·
+	newData[12] = 20<<2;//é¦–éƒ¨é•¿åº¦
 
-     //ÅĞ¶ÏĞèÒª·¢ËÍµÄ±¨ÎÄÀàĞÍ£¬²¢Õë¶ÔÌØ¶¨µÄÀàĞÍ½øĞĞÏàÓ¦µÄ´¦Àí 
+     //åˆ¤æ–­éœ€è¦å‘é€çš„æŠ¥æ–‡ç±»å‹ï¼Œå¹¶é’ˆå¯¹ç‰¹å®šçš„ç±»å‹è¿›è¡Œç›¸åº”çš„å¤„ç† 
      switch(flag){
-     case PACKET_TYPE_DATA: //Êı¾İ
+     case PACKET_TYPE_DATA: //æ•°æ®
           break;
-     case PACKET_TYPE_SYN://SYN±êÖ¾Î» 
+     case PACKET_TYPE_SYN://SYNæ ‡å¿—ä½ 
 		 newData[13] = SYN;
 		 tcb->state = SYN_SENT;
           break;
-     case PACKET_TYPE_SYN_ACK://SYN-ACK±êÖ¾Î» 
+     case PACKET_TYPE_SYN_ACK://SYN-ACKæ ‡å¿—ä½ 
 		 newData[13] = SYN_ACK;
           break;
-     case PACKET_TYPE_ACK://ACK±êÖ¾Î» 
+     case PACKET_TYPE_ACK://ACKæ ‡å¿—ä½ 
 		 newData[13] = ACK;
           break;
-     case PACKET_TYPE_FIN://FIN±êÖ¾Î» 
+     case PACKET_TYPE_FIN://FINæ ‡å¿—ä½ 
 		 newData[13] = FIN;
           break;
-     case PACKET_TYPE_FIN_ACK://FIN-ACK±êÖ¾Î» 
+     case PACKET_TYPE_FIN_ACK://FIN-ACKæ ‡å¿—ä½ 
 		 newData[13] = FIN_ACK;
 		 tcb->state = FIN_WAIT_1;
           break;
      }
-	 // 3.¹¹ÔìTCPÊı¾İ±¨ÎÄ²¢·¢ËÍ¡£ÌîĞ´TCP±¨ÎÄ¸÷×Ô¶ÎµÄÄÚÈİºÍÊı¾İ£¬×ª»»×Ö½ÚĞò£¬¼ÆËãĞ£ÑéºÍ¡£µ÷ÓÃÏÂ²ã½Ó¿Ú·¢ËÍº¯Êı
-	 *((UINT16*)(newData + 14)) = htons(tcb->window);//ÉèÖÃ´°¿Ú
-	 *((UINT16*)(newData + 16)) = checkSum((char*)newData, len + 20, srcAddr, dstAddr);//ÉèÖÃĞ£ÑéºÍ
+	 // 3.æ„é€ TCPæ•°æ®æŠ¥æ–‡å¹¶å‘é€ã€‚å¡«å†™TCPæŠ¥æ–‡å„è‡ªæ®µçš„å†…å®¹å’Œæ•°æ®ï¼Œè½¬æ¢å­—èŠ‚åºï¼Œè®¡ç®—æ ¡éªŒå’Œã€‚è°ƒç”¨ä¸‹å±‚æ¥å£å‘é€å‡½æ•°
+	 *((UINT16*)(newData + 14)) = htons(tcb->window);//è®¾ç½®çª—å£
+	 *((UINT16*)(newData + 16)) = checkSum((char*)newData, len + 20, srcAddr, dstAddr);//è®¾ç½®æ ¡éªŒå’Œ
 
 	 tcp_sendIpPkt(newData, len + 20, tcb->srcAddr, tcb->dstAddr, 255);
 
@@ -246,7 +246,7 @@ void stud_tcp_output(char *pData, unsigned short len, unsigned char flag, unsign
 }
 
 int stud_tcp_socket(int domain, int type, int protocol)
-{//´´½¨ĞÂµÄTCB½á¹¹£¬½øĞĞ³õÊ¼»¯£»ÎªÃ¿¸ö½á¹¹·ÖÅäÎ¨Ò»µÄÌ×½Ó¿ÚÃèÊö·û 
+{//åˆ›å»ºæ–°çš„TCBç»“æ„ï¼Œè¿›è¡Œåˆå§‹åŒ–ï¼›ä¸ºæ¯ä¸ªç»“æ„åˆ†é…å”¯ä¸€çš„å¥—æ¥å£æè¿°ç¬¦ 
 	TCB* tcb = new TCB(socketfd++);
 	tcb->next = tcb_link_head;
 	tcb_link_head = tcb;
@@ -254,22 +254,22 @@ int stud_tcp_socket(int domain, int type, int protocol)
 }
 
 int stud_tcp_connect(int sockfd, struct sockaddr_in *addr, int addrlen)
-{//Éè¶¨Ä¿µÄIPv4µØÖ·ºÍ¶Ë¿Ú
+{//è®¾å®šç›®çš„IPv4åœ°å€å’Œç«¯å£
 	TCB * tcb = TCBSearch_socket(sockfd);
 	if (tcb == NULL) return -1;
 
-	//Éè¶¨Ô´µØÖ·ºÍ¶Ë¿Ú
+	//è®¾å®šæºåœ°å€å’Œç«¯å£
 	tcb->srcAddr = getIpv4Address();
 	tcb->srcPort = gSrcPort;
 	tcb->dstAddr = ntohl(addr->sin_addr.s_addr);
 	tcb->dstPort = ntohs(addr->sin_port);
 	
 
-	/* ½¨Á¢Á¬½Ó£º·¢ËÍSYN±¨ÎÄ */
+	/* å»ºç«‹è¿æ¥ï¼šå‘é€SYNæŠ¥æ–‡ */
 	stud_tcp_output(NULL, 0, PACKET_TYPE_SYN, tcb->srcPort, tcb->dstPort, tcb->srcAddr, tcb->dstAddr);
 	char Buffer[BUFFER_SIZE];
 
-	/* ½ÓÊÕSYN_ACK±¨ÎÄ */
+	/* æ¥æ”¶SYN_ACKæŠ¥æ–‡ */
 	if (waitIpPacket(Buffer, TIMEOUT) == -1 || GetFlag(Buffer) != SYN_ACK)
 	{
 		return -1;
@@ -278,7 +278,7 @@ int stud_tcp_connect(int sockfd, struct sockaddr_in *addr, int addrlen)
 	tcb->seq = ntohl(GetAck(Buffer));
 	tcb->ack = ntohl( GetSeq(Buffer)) + 1;
 
-	/* ·¢ËÍACK±¨ÎÄ£¬½¨Á¢Á¬½ÓÍê³É */
+	/* å‘é€ACKæŠ¥æ–‡ï¼Œå»ºç«‹è¿æ¥å®Œæˆ */
 	stud_tcp_output(NULL, 0, PACKET_TYPE_ACK, tcb->srcPort, tcb->dstPort, tcb->srcAddr, tcb->dstAddr);
 
 	tcb->state = ESTABLISHED;
@@ -287,15 +287,15 @@ int stud_tcp_connect(int sockfd, struct sockaddr_in *addr, int addrlen)
 
 int stud_tcp_send(int sockfd, const unsigned char *pData, unsigned short datalen, int flags)
 {
-    //ÅĞ¶ÏÊÇ·ñ´¦ÓÚESTABLISHED×´Ì¬
+    //åˆ¤æ–­æ˜¯å¦å¤„äºESTABLISHEDçŠ¶æ€
 	TCB* tcb = TCBSearch_socket(sockfd);
 	if (tcb == NULL || tcb->state != ESTABLISHED) return -1;
 
-	/* ·¢ËÍDATA±¨ÎÄ */
+	/* å‘é€DATAæŠ¥æ–‡ */
 	stud_tcp_output((char *)pData, datalen, PACKET_TYPE_DATA, tcb->srcPort, tcb->dstPort, tcb->srcAddr, tcb->dstAddr);
 	
 	char buffer[BUFFER_SIZE];
-	/* µÈ´ı½ÓÊÕACK */
+	/* ç­‰å¾…æ¥æ”¶ACK */
 	if (waitIpPacket(buffer, TIMEOUT) == -1 || GetFlag(buffer) != ACK)
 	{
 		return -1;
@@ -310,27 +310,27 @@ int stud_tcp_send(int sockfd, const unsigned char *pData, unsigned short datalen
 int stud_tcp_recv(int sockfd, unsigned char *pData, unsigned short datalen, int flags)
 {
 	int len = 0;
-    //ÅĞ¶ÏÊÇ·ñ´¦ÓÚESTABLISHED×´Ì¬,Î´½¨Á¢Á¬½ÓÔòÖ±½Ó·µ»Ø
-	TCB *tcb = TCBSearch_socket(sockfd); // ÕÒµ½ÏàÓ¦TCB±íÏî
+    //åˆ¤æ–­æ˜¯å¦å¤„äºESTABLISHEDçŠ¶æ€,æœªå»ºç«‹è¿æ¥åˆ™ç›´æ¥è¿”å›
+	TCB *tcb = TCBSearch_socket(sockfd); // æ‰¾åˆ°ç›¸åº”TCBè¡¨é¡¹
 	if (tcb == NULL || tcb->state != ESTABLISHED)
 	{
 		return -1;
 	}
 
 	char buffer[BUFFER_SIZE];
-	/* µÈ´ı½ÓÊÕÊı¾İ */
+	/* ç­‰å¾…æ¥æ”¶æ•°æ® */
 	if ((len = waitIpPacket(buffer, TIMEOUT)) == -1)
 	{
 		return -1;
 	}
-    //´ÓTCBµÄÊäÈë»º³åÇø¶Á³öÊı¾İ
-	int header_length = (buffer[12] >> 2) & 0x3C; // TCPÍ·²¿³¤¶È£¬ÒÔ32Î»Îª¼ÆÁ¿µ¥Î»£¬Êµ¼ÊÉÏ³¤¶ÈÖ»Õ¼4Î»
+    //ä»TCBçš„è¾“å…¥ç¼“å†²åŒºè¯»å‡ºæ•°æ®
+	int header_length = (buffer[12] >> 2) & 0x3C; // TCPå¤´éƒ¨é•¿åº¦ï¼Œä»¥32ä½ä¸ºè®¡é‡å•ä½ï¼Œå®é™…ä¸Šé•¿åº¦åªå 4ä½
 	memcpy(pData, buffer + header_length, len - header_length);
 
 	tcb->seq = ntohl(GetAck(buffer));
-	tcb->ack = ntohl(GetSeq(buffer)) + (len - header_length);//£¿£¿£¿£¿£¿ÎªÊ²Ã´£¿£¿£¿
+	tcb->ack = ntohl(GetSeq(buffer)) + (len - header_length);//ï¼Ÿï¼Ÿï¼Ÿï¼Ÿï¼Ÿä¸ºä»€ä¹ˆï¼Ÿï¼Ÿï¼Ÿ
 
-	/* ·¢ËÍACK */
+	/* å‘é€ACK */
 	tcp_sendIpPkt(pData,len-header_length, tcb->srcAddr, tcb->dstAddr,255);
 
 	return 0;
@@ -338,7 +338,7 @@ int stud_tcp_recv(int sockfd, unsigned char *pData, unsigned short datalen, int 
 
 int stud_tcp_close(int _sockfd)
 {
-    //ÅĞ¶ÏÊÇ·ñÎªÕı³£Çé¿ö£ºESTABLISHED×´Ì¬
+    //åˆ¤æ–­æ˜¯å¦ä¸ºæ­£å¸¸æƒ…å†µï¼šESTABLISHEDçŠ¶æ€
 	TCB *pre = NULL;
 	TCB *tcb = TCBSearch_socket(_sockfd);
 	if (tcb == NULL)
@@ -346,7 +346,7 @@ int stud_tcp_close(int _sockfd)
 		return -1;
 	}
 
-	//Èç¹û²»ÊÇÕı³£Çé¿ö£¬Ö±½ÓÉ¾³ıTCB½á¹¹ºóÍË³ö
+	//å¦‚æœä¸æ˜¯æ­£å¸¸æƒ…å†µï¼Œç›´æ¥åˆ é™¤TCBç»“æ„åé€€å‡º
 	if (tcb->state != ESTABLISHED)
 	{
 		if (pre != NULL)
@@ -361,11 +361,11 @@ int stud_tcp_close(int _sockfd)
 		return -1;
 	}
 
-	//ÊÇ£ºµ÷ÓÃOUTPUTº¯Êı£¬·¢ËÍFIN±¨ÎÄ£¬·¢ËÍÀàĞÍÎªPACKET_TYPE_FIN
+	//æ˜¯ï¼šè°ƒç”¨OUTPUTå‡½æ•°ï¼Œå‘é€FINæŠ¥æ–‡ï¼Œå‘é€ç±»å‹ä¸ºPACKET_TYPE_FIN
 	stud_tcp_output(NULL, 0, PACKET_TYPE_FIN, tcb->srcPort, tcb->dstPort, tcb->srcAddr, tcb->dstAddr);
 
 	char buffer[BUFFER_SIZE];
-	/* µÈ´ı½ÓÊÕACK */
+	/* ç­‰å¾…æ¥æ”¶ACK */
 	if (waitIpPacket(buffer, TIMEOUT) == -1)
 	{
 		return -1;
@@ -377,7 +377,7 @@ int stud_tcp_close(int _sockfd)
 		tcb->seq = ntohl(GetAck(buffer));
 		tcb->ack = ntohl(GetSeq(buffer)) + 1;
 
-		/* ×¼±¸½ÓÊÕFIN_ACK */
+		/* å‡†å¤‡æ¥æ”¶FIN_ACK */
 		if (waitIpPacket(buffer, TIMEOUT) == -1) // wait for receiving FIN packet
 		{
 			return -1;
@@ -388,7 +388,7 @@ int stud_tcp_close(int _sockfd)
 			tcb->state = TIME_WAIT;
 			tcb->seq = ntohl(GetAck(buffer));
 			tcb->ack = ntohl(GetSeq(buffer)) + 1;
-			/* ·¢ËÍACK£¬¹Ø±ÕÁ¬½ÓÍê³É */
+			/* å‘é€ACKï¼Œå…³é—­è¿æ¥å®Œæˆ */
 			stud_tcp_output(NULL, 0, PACKET_TYPE_ACK, tcb->srcPort, tcb->dstPort, tcb->srcAddr, tcb->dstAddr);
 		}
 		else
@@ -401,7 +401,7 @@ int stud_tcp_close(int _sockfd)
 		return -1;
 	}
 
-	/* É¾³ıTCB±íÏî */
+	/* åˆ é™¤TCBè¡¨é¡¹ */
 	if (pre != NULL)
 	{
 		pre->next = tcb->next;
